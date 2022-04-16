@@ -18,11 +18,12 @@ from sklearn.linear_model import LogisticRegressionCV
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
-# from xgboost import XGBClassifier
-# from lightgbm import LGBMClassifier
 from sklearn.metrics import recall_score, confusion_matrix, roc_auc_score
-# import pickle
 import webbrowser
+from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
+
+import pickle
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -292,3 +293,257 @@ X_scaled = pd.DataFrame(X_scaled_arr, columns=X_columns)
 print(X_scaled.head())
 
 # Feature Selection
+
+rfe_model = RandomForestClassifier()
+rfe = RFE(rfe_model, verbose=3)
+X_rfe = rfe.fit_transform(X_scaled, y)
+
+# Extract the important features
+feature_series = pd.Series(rfe.support_, index=X_columns)
+important_features = list(feature_series[feature_series == True].index)
+
+print(important_features)
+
+# Prepare the final dataset
+X_final = X_scaled[important_features]
+
+# Classification
+
+# Split the data into training and testing set
+X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.2, random_state=42)
+
+# We are going to chose a model which gives maximum recall, in case of tie we are going to see which one gives maximum TPs.
+
+# 1. Compute Recall Score
+def compute_recall_score(model_dict, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test):
+  model_name = list(model_dict.keys())[0]
+  model_obj = list(model_dict.values())[0]
+
+  # Make predictions
+
+  # 1. Training predictions
+  train_preds = model_obj.predict(X_train)
+
+  # 2. Testing predictions
+  test_preds = model_obj.predict(X_test)
+
+  # Compute Recall Score
+
+  # 1. Training Score
+  train_recall = recall_score(y_train, train_preds)
+
+  # 2. Testing score
+  test_recall = recall_score(y_test, test_preds)
+
+  # Display the result
+  result_arr = np.array([train_recall, test_recall])
+  result_df = pd.DataFrame(data = result_arr.reshape(1,2), columns = ['Train_Recall', 'Test_Recall'], index=[model_name])
+
+  return result_df
+
+# Plot the Confusion Matrix
+def plot_confusion_matrix(model_dict, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test):
+
+  model_name = list(model_dict.keys())[0]
+  model_obj = list(model_dict.values())[0]
+
+  # Make predictions
+
+  # 1. Training predictions
+  train_preds = model_obj.predict(X_train)
+
+  # 2. Testing predictions
+  test_preds = model_obj.predict(X_test)
+
+  # Compute Recall Score
+
+  # 1. Training Score
+  train_recall = confusion_matrix(y_train, train_preds)
+
+  # 2. Testing score
+  test_recall = confusion_matrix(y_test, test_preds)
+
+  # Plot the heatmap
+  fig, ax = plt.subplots(1, 2, figsize=(15,8))
+
+  # PLot the trainig matrix
+  sns.heatmap(train_recall, annot=True, cbar=False, ax=ax[0], fmt='g')
+  ax[0].set_xlabel("Predicted Values")
+  ax[0].set_ylabel("Actual Values")
+  ax[0].set_title("Training Set Results")
+
+  # Plot the testing matrix
+  sns.heatmap(test_recall, annot=True, cbar=False, ax=ax[1], fmt='g')
+  ax[1].set_xlabel("Predicted Values")
+  ax[1].set_ylabel("Actual Values")
+  ax[1].set_title("Testing Set Results")
+
+  fig.show()
+  plt.show()
+
+# 1. Baseline Model -> KNN
+knn_clf = KNeighborsClassifier()
+knn_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'KNN' : knn_clf}
+knn_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(knn_results)
+
+# 2. Logistic Regression
+lr_clf = LogisticRegressionCV()
+lr_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'LogisticRegression' : lr_clf}
+lr_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(lr_results)
+
+# 3. Decision Tree
+dt_clf = DecisionTreeClassifier()
+dt_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'DecisionTree' : dt_clf}
+dt_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(dt_results)
+
+# 4. SVM
+svm_clf = SVC()
+svm_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'SVM' : svm_clf}
+svm_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(svm_results)
+
+# 5. Random Forest
+rf_clf = RandomForestClassifier()
+rf_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'RandomForest' : rf_clf}
+rf_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(rf_results)
+
+# 6. Extra Trees
+ext_clf = ExtraTreesClassifier()
+ext_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'ExtraTrees' : ext_clf}
+ext_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(ext_results)
+
+# 7. XGBoost
+xgb_clf = XGBClassifier()
+xgb_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'XGBoost' : xgb_clf}
+xgb_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(xgb_results)
+
+# 8. LightGBM
+lgbm_clf = LGBMClassifier()
+lgbm_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+model_dict={'LightGBM' : lgbm_clf}
+lgbm_results = compute_recall_score(model_dict=model_dict)
+plot_confusion_matrix(model_dict=model_dict)
+
+print(lgbm_results)
+
+
+
+
+
+
+# Concatenate the results
+final_results = pd.concat((knn_results, lr_results, 
+                           svm_results, dt_results, 
+                           rf_results, ext_results, 
+                           xgb_results, lgbm_results), axis=0).sort_values(by='Test_Recall', ascending=False)
+
+
+print(final_results)
+
+
+
+# Hyperparameter Tuning
+# Tune the top 2 models i.e LightGBM and ExtraTrees
+
+# 1. Light GBM
+lgbm_params = {"num_leaves" : [31, 50, 70, 90, 110],
+               "max_depth" : [10, 20, 30, 40, 50, 60],
+               "learning_rate" : [0.1, 0.5, 1, 1.5, 2.0],
+               "n_estimators" : [100, 150, 200, 250, 300, 350],
+               "reg_alpha" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "reg_lambda" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "colsample_bytree" : [0.0, 0.25, 0.50, 0.75, 1.0]
+               }
+
+lgbm_clf_2 = LGBMClassifier()
+
+# using randomised search cv
+rf_lgbm_clf = RandomizedSearchCV(lgbm_clf_2, lgbm_params, n_iter=20, scoring='recall', n_jobs=-1, cv=3, verbose=3, random_state=0)
+rf_lgbm_clf.fit(X_train, y_train)
+
+
+# Store the Best estimator
+lgbm_best = rf_lgbm_clf.best_estimator_
+
+# Generate Results
+model_dict = {'LGBM_Tuned' : lgbm_best}
+lgbm_best_results = compute_recall_score(model_dict)
+plot_confusion_matrix(model_dict)
+
+print(lgbm_best_results)
+
+# 2. Extra Trees
+ext_params = { "max_depth" : [10, 20, 30, 40, 50, 60],
+               "criterion" : ['gini', 'entropy'],
+               "n_estimators" : [100, 150, 200, 250, 300, 350],
+               "max_features" : ["auto", "sqrt", "log2"],
+               "min_samples_split" : [2, 4, 6, 8, 10],
+               "min_samples_leaf" : [1, 2, 3, 4, 5, 6, 7],
+               "bootstrap" : [True, False]
+              }
+
+ext_clf_2 = ExtraTreesClassifier()
+
+# using randomised search cv
+rf_ext_clf = RandomizedSearchCV(ext_clf_2, ext_params, n_iter=20, scoring='recall', n_jobs=-1, cv=3, verbose=3, random_state=0)
+print(rf_ext_clf.fit(X_train, y_train))
+
+# Store the Best estimator
+ext_best = rf_ext_clf.best_estimator_
+
+# Generate Results
+model_dict = {'ExtraTrees_Tuned' : ext_best}
+ext_best_results = compute_recall_score(model_dict)
+plot_confusion_matrix(model_dict)
+
+print(ext_best_results)
+
+lgbm_best.fit(X_scaled, y)
+
+model_file = './LightGBM.pkl'
+pickle.dump(lgbm_best, open(model_file, 'wb'))
+
+
