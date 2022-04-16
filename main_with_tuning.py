@@ -23,8 +23,6 @@ import webbrowser
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from prophet import Prophet
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import Lasso
 
 import pickle
 
@@ -35,7 +33,7 @@ warnings.filterwarnings('ignore')
 # Code Block
 
 df_forecast = pd.read_csv('data/forecast_data.csv')
-df_loc = pd.read_csv('data/location_data.csv')
+df_loc = pd.read_csv('data/df_loc.csv')
 print(df_loc.head())
 
 # Plotting the cities for which we have the data for
@@ -216,9 +214,9 @@ X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.2, r
 # We are going to chose a model which gives maximum recall, in case of tie we are going to see which one gives maximum TPs.
 
 # 1. Compute Recall Score
-def recall_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test):
-  name_arr = list(mdl_list1.keys())[0]
-  object_arr = list(mdl_list1.values())[0]
+def recall_function(model_dict, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test):
+  name_arr = list(model_dict.keys())[0]
+  object_arr = list(model_dict.values())[0]
 
   # Make predictions
 
@@ -243,10 +241,10 @@ def recall_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, 
   return result_df
 
 # 2. Plot the Confusion Matrix
-def cm_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test):
+def cm_function(model_dict, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test):
 
-  name_arr = list(mdl_list1.keys())[0]
-  object_arr = list(mdl_list1.values())[0]
+  name_arr = list(model_dict.keys())[0]
+  object_arr = list(model_dict.values())[0]
 
   # Make predictions
 
@@ -265,9 +263,9 @@ def cm_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, y_te
   test_recall = confusion_matrix(y_test, test_preds)
 
   # Plot the heatmap
-  fig, ax = plt.subplots(1, 2, figsize=(10,6))
+  fig, ax = plt.subplots(1, 2, figsize=(15,8))
 
-  # PLot the training matrix
+  # PLot the trainig matrix
   sns.heatmap(train_recall, annot=True, cbar=False, ax=ax[0], fmt='g')
   ax[0].set_xlabel("Predicted Values")
   ax[0].set_ylabel("Actual Values")
@@ -288,9 +286,9 @@ knn_clf = KNeighborsClassifier()
 knn_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'KNN' : knn_clf}
-knn_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'KNN' : knn_clf}
+knn_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(knn_results)
 
@@ -300,9 +298,9 @@ lr_clf = LogisticRegressionCV()
 lr_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'LogisticRegression' : lr_clf}
-lr_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'LogisticRegression' : lr_clf}
+lr_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(lr_results)
 
@@ -311,9 +309,9 @@ dt_clf = DecisionTreeClassifier()
 dt_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'DecisionTree' : dt_clf}
-dt_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'DecisionTree' : dt_clf}
+dt_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(dt_results)
 
@@ -322,9 +320,9 @@ svm_clf = SVC()
 svm_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'SVM' : svm_clf}
-svm_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'SVM' : svm_clf}
+svm_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(svm_results)
 
@@ -333,9 +331,9 @@ rf_clf = RandomForestClassifier()
 rf_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'RandomForest' : rf_clf}
-rf_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'RandomForest' : rf_clf}
+rf_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(rf_results)
 
@@ -344,9 +342,9 @@ ext_clf = ExtraTreesClassifier()
 ext_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'ExtraTrees' : ext_clf}
-ext_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'ExtraTrees' : ext_clf}
+ext_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(ext_results)
 
@@ -355,9 +353,9 @@ xgb_clf = XGBClassifier()
 xgb_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'XGBoost' : xgb_clf}
-xgb_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'XGBoost' : xgb_clf}
+xgb_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(xgb_results)
 
@@ -366,52 +364,89 @@ lgbm_clf = LGBMClassifier()
 lgbm_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'LightGBM' : lgbm_clf}
-lgbm_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
+model_dict={'LightGBM' : lgbm_clf}
+lgbm_results = recall_function(model_dict=model_dict)
+cm_function(model_dict=model_dict)
 
 print(lgbm_results)
 
 
 # 9. Prophet
-prophet_clf = Prophet()
-prophet_clf.fit(X_train, y_train)
 
-# Compute Scores and plot confusion matrix
-mdl_list1={'Prophet' : prophet_clf}
-prophet_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
 
-print(prophet_results)
 
-# 10. Ridge Regression
-ridge_clf = Ridge(alpha=1.0)
-ridge_clf.fit(X_train, y_train)
-
-# Compute Scores and plot confusion matrix
-mdl_list1={'Ridge' : ridge_clf}
-ridge_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
-
-print(ridge_results)
-
-# 11. Lasso Regression
-lasso_clf = Lasso(alpha=1.0)
-lasso_clf.fit(X_train, y_train)
-
-# Compute Scores and plot confusion matrix
-mdl_list1={'Lasso' : lasso_clf}
-lasso_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
-
-print(lasso_results)
 
 
 # Concatenate the results
 final_results = pd.concat((knn_results, lr_results, 
                            svm_results, dt_results, 
                            rf_results, ext_results, 
-                           xgb_results, lgbm_results, prophet_results, ridge_results, lasso_results), axis=0).sort_values(by='Test_Recall', ascending=False)
+                           xgb_results, lgbm_results), axis=0).sort_values(by='Test_Recall', ascending=False)
 
 
 print(final_results)
+
+
+
+# Hyperparameter Tuning
+# Tune the top 2 models i.e LightGBM and ExtraTrees
+
+# 1. Light GBM
+lgbm_params = {"num_leaves" : [31, 50, 70, 90, 110],
+               "max_depth" : [10, 20, 30, 40, 50, 60],
+               "learning_rate" : [0.1, 0.5, 1, 1.5, 2.0],
+               "n_estimators" : [100, 150, 200, 250, 300, 350],
+               "reg_alpha" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "reg_lambda" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "colsample_bytree" : [0.0, 0.25, 0.50, 0.75, 1.0]
+               }
+
+lgbm_clf_2 = LGBMClassifier()
+
+# using randomised search cv
+rf_lgbm_clf = RandomizedSearchCV(lgbm_clf_2, lgbm_params, n_iter=20, scoring='recall', n_jobs=-1, cv=3, verbose=3, random_state=0)
+rf_lgbm_clf.fit(X_train, y_train)
+
+
+# Store the Best estimator
+lgbm_best = rf_lgbm_clf.best_estimator_
+
+# Generate Results
+model_dict = {'LGBM_Tuned' : lgbm_best}
+lgbm_best_results = recall_function(model_dict)
+cm_function(model_dict)
+
+print(lgbm_best_results)
+
+# 2. Extra Trees
+ext_params = { "max_depth" : [10, 20, 30, 40, 50, 60],
+               "criterion" : ['gini', 'entropy'],
+               "n_estimators" : [100, 150, 200, 250, 300, 350],
+               "max_features" : ["auto", "sqrt", "log2"],
+               "min_samples_split" : [2, 4, 6, 8, 10],
+               "min_samples_leaf" : [1, 2, 3, 4, 5, 6, 7],
+               "bootstrap" : [True, False]
+              }
+
+ext_clf_2 = ExtraTreesClassifier()
+
+# using randomised search cv
+rf_ext_clf = RandomizedSearchCV(ext_clf_2, ext_params, n_iter=20, scoring='recall', n_jobs=-1, cv=3, verbose=3, random_state=0)
+print(rf_ext_clf.fit(X_train, y_train))
+
+# Store the Best estimator
+ext_best = rf_ext_clf.best_estimator_
+
+# Generate Results
+model_dict = {'ExtraTrees_Tuned' : ext_best}
+ext_best_results = recall_function(model_dict)
+cm_function(model_dict)
+
+print(ext_best_results)
+
+lgbm_best.fit(X_scl2, y)
+
+model_file = './LightGBM.pkl'
+pickle.dump(lgbm_best, open(model_file, 'wb'))
+
+
