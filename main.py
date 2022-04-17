@@ -14,17 +14,19 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.feature_selection import RFE
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn.metrics import recall_score, confusion_matrix, roc_auc_score
 import webbrowser
+from sklearn.ensemble import GradientBoostingClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
-from prophet import Prophet
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import Lasso
+from catboost import CatBoostClassifier
+
+from sklearn.metrics import f1_score, fbeta_score
+from tabulate import tabulate
 
 import pickle
 
@@ -46,6 +48,7 @@ def plot_map(df):
   # The function will add markers at the coordinates present in our dataframe
   folium.Marker(location=[df.lat, df.lon]).add_to(India_folium)
 
+
 # Apply the function to the dataframe
 df_loc.apply(plot_map, axis=1)
 India_folium.fit_bounds([[30.3753, 69.3451], [7.8731, 80.7718]])
@@ -54,6 +57,8 @@ India_folium.save(map_file1)
 webbrowser.open('file://' + os.path.realpath(map_file1))
 
 print(df_forecast.head())
+
+# Data Preprocessing
 
 # Extract the condition text from the json string
 df_forecast['condition'] = df_forecast['condition'].apply(lambda x : eval(x)['text'])
@@ -84,10 +89,10 @@ plt.show()
 
 # Plotting categorical discrete variables
 
-# 1. Plotting days and nights count
-plt.figure(figsize=(6,4))
-sns.countplot(data=df_forecast, x='is_day')
-plt.show()
+# # 1. Plotting days and nights count
+# plt.figure(figsize=(6,4))
+# sns.countplot(data=df_forecast, x='is_day')
+# plt.show()
 
 df_forecast['condition'].value_counts().sort_values().plot(kind='barh', figsize=(6,4))
 plt.xlabel("Weather Conditions")
@@ -101,11 +106,11 @@ plt.ylabel("Frequency")
 plt.grid()
 plt.show()
 
-# Plot state distribution
-df_forecast['state'].value_counts().sort_values().plot(kind='barh', figsize=(6,4))
-plt.xlabel("Frequency")
-plt.ylabel("State")
-plt.show()
+# # Plot state distribution
+# df_forecast['state'].value_counts().sort_values().plot(kind='barh', figsize=(6,4))
+# plt.xlabel("Frequency")
+# plt.ylabel("State")
+# plt.show()
 
 # Plot the count of rainy forecasts
 sns.countplot(data=df_forecast, x='will_it_rain')
@@ -129,6 +134,7 @@ plt.figure(figsize=(8,6))
 plt.barh(y = state_mean_df.sort_values(by='temp_c')['state'], width = state_mean_df.sort_values(by='temp_c')['temp_c'])
 plt.xlabel("State")
 plt.ylabel("Temperature in degree Celsius")
+plt.title("Average Temperature (in Celcius) by State")
 plt.show()
 
 # store the name of the states in a list and sort them alphabetically
@@ -161,7 +167,7 @@ print(df_forecast[cont_data_col_df].head())
 # Plot the correlation heatmap
 corr_matrix = df_forecast.corr()
 plt.figure(figsize=(8, 8))
-sns.heatmap(corr_matrix, annot=True, cbar=False)
+sns.heatmap(corr_matrix, annot=True, cbar=False, cmap="YlGnBu")
 plt.show()
 
 print(df_forecast.head())
@@ -226,7 +232,7 @@ def recall_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, 
   train_preds = object_arr.predict(X_train)
 
   # 2. Testing predictions
-  test_preds = object_arr.predict(X_test)
+  y_pred = object_arr.predict(X_test)
 
   # Compute Recall Score
 
@@ -234,11 +240,16 @@ def recall_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, 
   train_recall = recall_score(y_train, train_preds)
 
   # 2. Testing score
-  test_recall = recall_score(y_test, test_preds)
+  test_recall = recall_score(y_test, y_pred)
+
+  # Compute other values (f1, fbeta, etc)
+  f1_measure = f1_score(y_test, y_pred)
+  fbeta_measure = fbeta_score(y_test, y_pred, beta=1.0)
 
   # Display the result
-  result_arr = np.array([train_recall, test_recall])
-  result_df = pd.DataFrame(data = result_arr.reshape(1,2), columns = ['Train_Recall', 'Test_Recall'], index=[name_arr])
+  result_arr = np.array([train_recall, test_recall, f1_measure, fbeta_measure])
+  result_df = pd.DataFrame(data = result_arr.reshape(1,4), 
+        columns = ['Train_Recall', 'Test_Recall', 'F1_Measure', 'FBeta_Measure'], index=[name_arr])
 
   return result_df
 
@@ -254,7 +265,7 @@ def cm_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, y_te
   train_preds = object_arr.predict(X_train)
 
   # 2. Testing predictions
-  test_preds = object_arr.predict(X_test)
+  y_pred = object_arr.predict(X_test)
 
   # Compute Recall Score
 
@@ -262,7 +273,7 @@ def cm_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, y_te
   train_recall = confusion_matrix(y_train, train_preds)
 
   # 2. Testing score
-  test_recall = confusion_matrix(y_test, test_preds)
+  test_recall = confusion_matrix(y_test, y_pred)
 
   # Plot the heatmap
   fig, ax = plt.subplots(1, 2, figsize=(10,6))
@@ -271,13 +282,13 @@ def cm_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, y_te
   sns.heatmap(train_recall, annot=True, cbar=False, ax=ax[0], fmt='g')
   ax[0].set_xlabel("Predicted Values")
   ax[0].set_ylabel("Actual Values")
-  ax[0].set_title("Training Set Results")
+  ax[0].set_title(str(name_arr) + ": Training Set Results")
 
   # Plot the testing matrix
   sns.heatmap(test_recall, annot=True, cbar=False, ax=ax[1], fmt='g')
   ax[1].set_xlabel("Predicted Values")
   ax[1].set_ylabel("Actual Values")
-  ax[1].set_title("Testing Set Results")
+  ax[1].set_title(str(name_arr) + ": Testing Set Results")
 
   fig.show()
   plt.show()
@@ -296,7 +307,7 @@ print(knn_results)
 
 
 # 2. Logistic Regression
-lr_clf = LogisticRegressionCV()
+lr_clf = LogisticRegression()
 lr_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
@@ -350,7 +361,18 @@ cm_function(mdl_list1=mdl_list1)
 
 print(ext_results)
 
-# 7. XGBoost
+# 7. GBM
+gbm_clf = GradientBoostingClassifier()
+gbm_clf.fit(X_train, y_train)
+
+# Compute Scores and plot confusion matrix
+mdl_list1={'GBM' : gbm_clf}
+gbm_results = recall_function(mdl_list1=mdl_list1)
+cm_function(mdl_list1=mdl_list1)
+
+print(gbm_results)
+
+# 8. XGBoost
 xgb_clf = XGBClassifier()
 xgb_clf.fit(X_train, y_train)
 
@@ -361,7 +383,7 @@ cm_function(mdl_list1=mdl_list1)
 
 print(xgb_results)
 
-# 8. LightGBM
+# 9. LightGBM
 lgbm_clf = LGBMClassifier()
 lgbm_clf.fit(X_train, y_train)
 
@@ -372,46 +394,23 @@ cm_function(mdl_list1=mdl_list1)
 
 print(lgbm_results)
 
-
-# 9. Prophet
-prophet_clf = Prophet()
-prophet_clf.fit(X_train, y_train)
-
-# Compute Scores and plot confusion matrix
-mdl_list1={'Prophet' : prophet_clf}
-prophet_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
-
-print(prophet_results)
-
-# 10. Ridge Regression
-ridge_clf = Ridge(alpha=1.0)
-ridge_clf.fit(X_train, y_train)
+# 10. CatBoost
+catboost_clf = CatBoostClassifier()
+catboost_clf.fit(X_train, y_train)
 
 # Compute Scores and plot confusion matrix
-mdl_list1={'Ridge' : ridge_clf}
-ridge_results = recall_function(mdl_list1=mdl_list1)
+mdl_list1={'CatBoost' : catboost_clf}
+catboost_results = recall_function(mdl_list1=mdl_list1)
 cm_function(mdl_list1=mdl_list1)
 
-print(ridge_results)
-
-# 11. Lasso Regression
-lasso_clf = Lasso(alpha=1.0)
-lasso_clf.fit(X_train, y_train)
-
-# Compute Scores and plot confusion matrix
-mdl_list1={'Lasso' : lasso_clf}
-lasso_results = recall_function(mdl_list1=mdl_list1)
-cm_function(mdl_list1=mdl_list1)
-
-print(lasso_results)
-
+print(catboost_results)
 
 # Concatenate the results
 final_results = pd.concat((knn_results, lr_results, 
                            svm_results, dt_results, 
                            rf_results, ext_results, 
-                           xgb_results, lgbm_results, prophet_results, ridge_results, lasso_results), axis=0).sort_values(by='Test_Recall', ascending=False)
+                           gbm_results, xgb_results, 
+                           lgbm_results, catboost_results), axis=0).sort_values(by='FBeta_Measure', ascending=False)
 
 
-print(final_results)
+print(tabulate(final_results, headers = 'keys', tablefmt = 'pretty'))
