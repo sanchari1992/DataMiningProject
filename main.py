@@ -405,12 +405,73 @@ cm_function(mdl_list1=mdl_list1)
 
 print(catboost_results)
 
+# Hyperparameter Tuning
+# Tune the top 2 models i.e LightGBM and ExtraTrees
+
+# 11. XGBoost
+
+xgb_params = {"num_leaves" : [20, 50, 75, 90, 120],
+               "max_depth" : [10, 20, 30, 40, 50, 60],
+               "learning_rate" : [0.1, 0.5, 1, 1.5, 2.0],
+               "n_estimators" : [100, 150, 200, 250, 300, 350],
+               "reg_alpha" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "reg_lambda" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "colsample_bytree" : [0.0, 0.25, 0.50, 0.75, 1.0]
+               }
+
+xgb_clf_2 = XGBClassifier()
+
+# using randomised search cv
+rf_xgb_clf = RandomizedSearchCV(xgb_clf_2, xgb_params, n_iter=20, scoring='recall', n_jobs=-1, cv=3, verbose=3, random_state=0)
+rf_xgb_clf.fit(X_train, y_train)
+
+
+# Store the Best estimator
+xgb_best = rf_xgb_clf.best_estimator_
+
+# Generate Results
+mdl_list1 = {'XGB_Tuned' : xgb_best}
+xgb_best_results = recall_function(mdl_list1=mdl_list1)
+cm_function(mdl_list1=mdl_list1)
+
+print(xgb_best_results)
+
+
+# 12. Light GBM
+
+lgbm_params = {"num_leaves" : [20, 50, 75, 90, 120],
+               "max_depth" : [10, 20, 30, 40, 50, 60],
+               "learning_rate" : [0.1, 0.5, 1, 1.5, 2.0],
+               "n_estimators" : [100, 150, 200, 250, 300, 350],
+               "reg_alpha" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "reg_lambda" : [0.0, 0.25, 0.50, 0.75, 1.0, 2.0],
+               "colsample_bytree" : [0.0, 0.25, 0.50, 0.75, 1.0]
+               }
+
+lgbm_clf_2 = LGBMClassifier()
+
+# using randomised search cv
+rf_lgbm_clf = RandomizedSearchCV(lgbm_clf_2, lgbm_params, n_iter=20, scoring='recall', n_jobs=-1, cv=3, verbose=3, random_state=0)
+rf_lgbm_clf.fit(X_train, y_train)
+
+
+# Store the Best estimator
+lgbm_best = rf_lgbm_clf.best_estimator_
+
+# Generate Results
+mdl_list1 = {'LGBM_Tuned' : lgbm_best}
+lgbm_best_results = recall_function(mdl_list1=mdl_list1)
+cm_function(mdl_list1=mdl_list1)
+
+print(lgbm_best_results)
+
 # Concatenate the results
 final_results = pd.concat((knn_results, lr_results, 
                            svm_results, dt_results, 
                            rf_results, ext_results, 
                            gbm_results, xgb_results, 
-                           lgbm_results, catboost_results), axis=0).sort_values(by='FBeta_Measure', ascending=False)
+                           lgbm_results, catboost_results,
+                           xgb_best_results, lgbm_best_results), axis=0).sort_values(by='FBeta_Measure', ascending=False)
 
 
 print(tabulate(final_results, headers = 'keys', tablefmt = 'pretty'))
