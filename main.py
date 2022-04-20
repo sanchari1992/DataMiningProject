@@ -18,7 +18,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
-from sklearn.metrics import recall_score, confusion_matrix, roc_auc_score
+from sklearn.metrics import recall_score, confusion_matrix, precision_score
 import webbrowser
 from sklearn.ensemble import GradientBoostingClassifier
 from lightgbm import LGBMClassifier
@@ -238,18 +238,20 @@ def recall_function(mdl_list1, X_train=X_train, X_test=X_test, y_train=y_train, 
 
   # 1. Training Score
   train_recall = recall_score(y_train, train_preds)
+  train_prec = precision_score(y_train, train_preds)
 
   # 2. Testing score
   test_recall = recall_score(y_test, y_pred)
+  test_prec = precision_score(y_test, y_pred)
 
   # Compute other values (f1, fbeta, etc)
   f1_measure = f1_score(y_test, y_pred)
   fbeta_measure = fbeta_score(y_test, y_pred, beta=1.0)
 
   # Display the result
-  result_arr = np.array([train_recall, test_recall, f1_measure, fbeta_measure])
-  result_df = pd.DataFrame(data = result_arr.reshape(1,4), 
-        columns = ['Train_Recall', 'Test_Recall', 'F1_Measure', 'FBeta_Measure'], index=[name_arr])
+  result_arr = np.array([train_recall, test_recall, train_prec, test_prec, f1_measure, fbeta_measure])
+  result_df = pd.DataFrame(data = result_arr.reshape(1,6), 
+        columns = ['Train_Recall', 'Test_Recall', 'Train_Precision', 'Test_Precision', 'F1_Measure', 'FBeta_Measure'], index=[name_arr])
 
   return result_df
 
