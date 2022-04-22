@@ -475,5 +475,5 @@ final_results = pd.concat((knn_results, lr_results,
                            lgbm_results, catboost_results,
                            xgb_best_results, lgbm_best_results), axis=0).sort_values(by='FBeta_Measure', ascending=False)
 
-
+final_results = final_results.round(2)
 print(tabulate(final_results, headers = 'keys', tablefmt = 'pretty'))
